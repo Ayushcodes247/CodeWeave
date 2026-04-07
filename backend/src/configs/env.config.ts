@@ -7,6 +7,7 @@ export interface EnvConfiguration {
   NODE_ENV: string;
   ORIGIN : string; 
   SECRET : string;
+  BASE_URL : string;
 }
 
 export const env: EnvConfiguration = {
@@ -14,7 +15,8 @@ export const env: EnvConfiguration = {
   MONGOURI: process.env.MONGO_URI || "mongodb://localhost:27107/your-db",
   NODE_ENV: process.env.NODE_ENV || "development",
   ORIGIN : process.env.ORIGIN || "*",
-  SECRET : process.env.JWT_SECRET || "your secret key"
+  SECRET : process.env.JWT_SECRET || "your secret key",
+  BASE_URL : process.env.BASE_URL || "your base url."
 };
 
 if(!env){
