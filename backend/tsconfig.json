@@ -51,6 +51,8 @@
       "@middlewares/*" : ["middlewares/*"],
       "@routes/*" : ["routes/*"],
       "@controllers/*" : ["controllers/*"],
+      "@models/*" : ["models/*"],
+      "@services/*" : ["services/*"]
     }
   }
 }

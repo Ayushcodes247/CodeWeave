@@ -6,13 +6,15 @@ export interface EnvConfiguration {
   MONGOURI: string;
   NODE_ENV: string;
   ORIGIN : string; 
+  SECRET : string;
 }
 
 export const env: EnvConfiguration = {
   PORT: process.env.PORT || 3000,
   MONGOURI: process.env.MONGO_URI || "mongodb://localhost:27107/your-db",
   NODE_ENV: process.env.NODE_ENV || "development",
-  ORIGIN : process.env.ORIGIN || "*"
+  ORIGIN : process.env.ORIGIN || "*",
+  SECRET : process.env.JWT_SECRET || "your secret key"
 };
 
 if(!env){

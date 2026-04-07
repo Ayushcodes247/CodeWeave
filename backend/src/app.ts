@@ -9,6 +9,7 @@ import {
 import helmet from "helmet";
 import routes from "@routes/index.route";
 import { rateLimit } from "express-rate-limit";
+import path from "path";
 
 const app: Express = express();
 app.use(express.json());
@@ -21,6 +22,7 @@ app.use(
     credentials: true,
   }),
 );
+app.use("/public", express.static(path.join(__dirname, "public")));
 app.use(helmet());
 app.use(helmet.hsts({ maxAge: 31536000, includeSubDomains: true }));
 app.use(checkDBStatus);
