@@ -9,7 +9,8 @@ interface SafeUser {
 }
 
 interface ReturnType {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: SafeUser;
 }
 
@@ -23,7 +24,9 @@ const loginService = async (data: ArgType): Promise<ReturnType> => {
     throw new AppError("Missing login details.", 400);
   }
 
-  const user = await User.findOne({ email: data.email }).select("+password");
+  const user = await User.findOne({ email: data.email }).select(
+    "+password +provider -__v -createdAt -updatedAt",
+  );
 
   if (!user) {
     throw new AppError("Invalid email or password.", 401);
@@ -39,10 +42,12 @@ const loginService = async (data: ArgType): Promise<ReturnType> => {
     throw new AppError("Invalid email or password.", 401);
   }
 
-  const token = user.generateAuthToken();
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
 
   return {
-    token,
+    accessToken,
+    refreshToken,
     user: {
       _id: user._id.toString(),
       username: user.username,

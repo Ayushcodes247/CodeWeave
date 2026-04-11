@@ -2,10 +2,23 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/server.js",
+  "_moduleAliases": {
+    "@controllers": "dist/controllers",
+    "@models": "dist/models",
+    "@routes": "dist/routes",
+    "@middlewares": "dist/middlewares",
+    "@utils": "dist/utils",
+    "@configs": "dist/configs",
+    "@services": "dist/services",
+    "@types": "dist/types"
+  },
   "scripts": {
     "test": "jest",
-    "dev:server": "ts-node-dev -r tsconfig-paths/register --respawn src/server.ts"
+    "dev:server": "ts-node-dev -r tsconfig-paths/register --respawn src/server.ts",
+    "build": "tsc --watch",
+    "build:server": "npx nodemon -r module-alias/register dist/server.js",
+    "start": "node -r module-alias/register dist/server.js"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +33,7 @@
     "helmet": "^8.1.0",
     "joi": "^18.1.2",
     "jsonwebtoken": "^9.0.3",
+    "module-alias": "^2.3.4",
     "mongoose": "^9.4.1"
   },
   "devDependencies": {

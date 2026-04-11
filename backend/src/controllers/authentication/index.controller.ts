@@ -3,6 +3,8 @@ import { Request, Response, NextFunction } from "express";
 import registerUser from "@services/authentication/register.service";
 import { env } from "@configs/env.config";
 import loginService from "@services/authentication/login.service";
+import inValidateToken from "@services/authentication/logout.service";
+import sessionService from "@services/authentication/session.service";
 
 const token_name = "auth_token";
 
@@ -30,10 +32,21 @@ export const register = asyncHandler(
 
     const userData = { username, email, password, gender, profilePic };
 
-    const { token, user } = await registerUser(userData);
+    const { accessToken, refreshToken, user } = await registerUser(userData);
 
-    res.cookie(token_name, token, {
-      maxAge: 24 * 60 * 60 * 1000,
+    const sessionData = {
+      uid: user._id.toString(),
+      refreshToken,
+      ip: req.ip || "0.0.0.0",
+      agent:
+        (req.get("user-agent")
+          ? req.get("user-agent")
+          : req.headers["user-agent"]) || "unknown",
+    };
+    const { message } = await sessionService(sessionData);
+
+    res.cookie(token_name, refreshToken, {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: env.NODE_ENV === "production",
       sameSite: env.NODE_ENV === "production" ? "none" : "lax",
@@ -42,8 +55,9 @@ export const register = asyncHandler(
 
     res.status(201).json({
       success: true,
+      accessToken,
       user,
-      message: "User Registered successfully.",
+      message: "User Registered successfully." + "and" + `${message}`,
     });
   },
 );
@@ -56,9 +70,22 @@ export const login = asyncHandler(
       return next(new AppError("All fields are required.", 400));
     }
 
-    const { user, token } = await loginService({ email, password });
+    const { user, refreshToken, accessToken } = await loginService({
+      email,
+      password,
+    });
+    const sessionData = {
+      uid: user._id.toString(),
+      refreshToken,
+      ip: req.ip || "0.0.0.0",
+      agent:
+        (req.get("user-agent")
+          ? req.get("user-agent")
+          : req.headers["user-agent"]) || "unknown",
+    };
+    const { message } = await sessionService(sessionData);
 
-    res.cookie(token_name, token, {
+    res.cookie(token_name, refreshToken, {
       maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: env.NODE_ENV === "production",
@@ -68,12 +95,48 @@ export const login = asyncHandler(
 
     res.status(200).json({
       success: true,
+      accessToken,
       user,
-      message: "User logged in successfully.",
+      message: "User logged in successfully and" + `${message}.`,
     });
   },
 );
 
 export const profile = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {},
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = req.user;
+
+    res.status(200).json({
+      success: true,
+      user,
+      message: "Profile fetched successfully.",
+    });
+  },
+);
+
+export const logout = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token =
+      req.cookies?.[token_name] ||
+      (req.headers.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization.split(" ")[1]
+        : null);
+
+    if (!token) {
+      return next(new AppError("Unauthorized. Token missing.", 401));
+    }
+
+    await inValidateToken({ token });
+
+    res.clearCookie(token_name, {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Logout successfully.",
+    });
+  },
 );

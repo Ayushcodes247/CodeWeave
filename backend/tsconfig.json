@@ -10,6 +10,7 @@
     "module": "nodenext",
     "target": "esnext",
     "types": ["node"],
+    "typeRoots": ["./node_modules/@types","./src/types"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -52,7 +53,8 @@
       "@routes/*" : ["routes/*"],
       "@controllers/*" : ["controllers/*"],
       "@models/*" : ["models/*"],
-      "@services/*" : ["services/*"]
+      "@services/*" : ["services/*"],
+      "@types/*": ["types/*"],
     }
   }
 }

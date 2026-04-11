@@ -1,21 +1,28 @@
 import { User, validateUser, IUser } from "@models/user.model";
 import { AppError } from "@utils/essential.util";
+import { Types } from "mongoose";
 
 interface SafeUser {
-  _id: string;
+  _id: Types.ObjectId;
   username: string;
   email: string;
   profilePic: string | undefined;
 }
 
 interface ReturnType {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: SafeUser;
 }
 
 const registerUser = async (userData: Partial<IUser>): Promise<ReturnType> => {
   if (!userData) {
     throw new AppError("Please provide valid user data.", 400);
+  }
+
+  const exists = await User.findOne({ email: userData.email! });
+  if (exists) {
+    throw new AppError("User Already exists.", 409);
   }
 
   const { value, error } = validateUser({
@@ -43,12 +50,15 @@ const registerUser = async (userData: Partial<IUser>): Promise<ReturnType> => {
     throw err;
   }
 
-  const token = user.generateAuthToken();
+  const accessToken = user.generateAccessToken();
+
+  const refreshToken = user.generateRefreshToken();
 
   return {
-    token,
+    accessToken,
+    refreshToken,
     user: {
-      _id: user._id.toString(),
+      _id: user._id,
       username: user.username,
       email: user.email,
       profilePic: user.profilePic,

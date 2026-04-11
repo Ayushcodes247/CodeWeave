@@ -1,5 +1,5 @@
 import { Model, Schema, Document, ObjectId, model } from "mongoose";
-import Joi, { types, ValidationResult } from "joi";
+import Joi, { ValidationResult } from "joi";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { env } from "@configs/env.config";
@@ -14,7 +14,8 @@ export interface IUser extends Document {
   rooms?: ObjectId[];
   gender: string;
   comparePassword(password: string): Promise<boolean>;
-  generateAuthToken(): string;
+  generateAccessToken(): string;
+  generateRefreshToken(): string;
 }
 
 export interface IUserModel extends Model<IUser> {
@@ -106,9 +107,16 @@ userSchema.index(
 
 userSchema.index({ username: 1, email: 1 });
 
-userSchema.methods.generateAuthToken = function (): string {
+userSchema.methods.generateAccessToken = function (): string {
   return jwt.sign({ _id: this._id }, env.SECRET, {
-    expiresIn: "1d",
+    expiresIn: "15m",
+    algorithm: "HS256",
+  });
+};
+
+userSchema.methods.generateRefreshToken = function (): string {
+  return jwt.sign({ _id: this._id }, env.SECRET, {
+    expiresIn: "7d",
     algorithm: "HS256",
   });
 };
@@ -127,31 +135,19 @@ userSchema.statics.hashPassword = async function (
 
 export const validateUser = (user: object): ValidationResult => {
   const schema = Joi.object({
-    username: Joi.string()
-      .max(50)
-      .min(2)
-      .required(),
-    email: Joi.string()
-      .email()
-      .required(),
+    username: Joi.string().max(50).min(2).required(),
+    email: Joi.string().email().required(),
     password: Joi.string()
       .min(4)
       .when("provider", { is: "local", then: Joi.required() }),
-    provider: Joi.string()
-      .valid("local", "github")
-      .required(),
-    githubID: Joi.string()
-      .when("provider", { is: "github", then: Joi.required() }),
-    gender: Joi.string()
-      .valid("male", "female")
-      .default("male")
-      .required(),
-    profilePic: Joi.string()
-      .uri()
-      .optional(),
-    rooms: Joi.array()
-      .items(Joi.string().hex().length(24))
-      .optional(),
+    provider: Joi.string().valid("local", "github").required(),
+    githubID: Joi.string().when("provider", {
+      is: "github",
+      then: Joi.required(),
+    }),
+    gender: Joi.string().valid("male", "female").default("male").required(),
+    profilePic: Joi.string().uri().optional(),
+    rooms: Joi.array().items(Joi.string().hex().length(24)).optional(),
   }).unknown(false);
 
   return schema.validate(user, { abortEarly: false, stripUnknown: true });
