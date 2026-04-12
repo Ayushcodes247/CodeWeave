@@ -5,6 +5,8 @@ import { env } from "@configs/env.config";
 import loginService from "@services/authentication/login.service";
 import inValidateToken from "@services/authentication/logout.service";
 import sessionService from "@services/authentication/session.service";
+import { Session } from "@models/session.model";
+import { User } from "@models/user.model";
 
 const token_name = "auth_token";
 
@@ -115,18 +117,40 @@ export const profile = asyncHandler(
 );
 
 export const logout = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const token =
-      req.cookies?.[token_name] ||
-      (req.headers.authorization?.startsWith("Bearer ")
-        ? req.headers.authorization.split(" ")[1]
-        : null);
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const refreshToken = req.cookies?.[token_name];
+    const user = req.user;
+    const accessToken = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : null;
 
-    if (!token) {
-      return next(new AppError("Unauthorized. Token missing.", 401));
+    if (!user) {
+      return next(new AppError("Unauthorized.", 401));
     }
 
-    await inValidateToken({ token });
+    if (!refreshToken) {
+      return next(new AppError("Token missing.", 401));
+    }
+
+    const agent = req.get("user-agent");
+    const session = await Session.findOne({
+      uid: user._id,
+      revoked: false,
+      agent: String(agent),
+    });
+
+    if (!session) {
+      return next(new AppError("Session not found.", 404));
+    }
+
+    const isValid = await session.validRefreshToken(refreshToken);
+
+    if (!isValid) {
+      return next(new AppError("Invalid session.", 401));
+    }
+
+    session.revoked = true;
+    await session.save();
 
     res.clearCookie(token_name, {
       httpOnly: true,
@@ -134,9 +158,104 @@ export const logout = asyncHandler(
       sameSite: env.NODE_ENV === "production" ? "none" : "lax",
     });
 
+    await inValidateToken({ token: String(accessToken) });
+
     res.status(200).json({
       success: true,
       message: "Logout successfully.",
+    });
+  },
+);
+
+export const logoutAll = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = req.user;
+
+    const accessToken = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : null;
+
+    if (!user) {
+      return next(new AppError("Unauthorized.", 401));
+    }
+
+    const result = await Session.updateMany(
+      { uid: user._id, revoked: false },
+      { $set: { revoked: true } },
+    );
+
+    if (result.matchedCount === 0) {
+      return next(new AppError("No active sessions found.", 404));
+    }
+
+    res.clearCookie(token_name, {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    });
+
+    if (accessToken) {
+      await inValidateToken({ token: accessToken });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Logged out from all devices.",
+    });
+  },
+);
+
+export const refresh = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const token = req.cookies?.[token_name];
+    const session = req.session;
+
+    if (!token) {
+      return next(new AppError("Refresh token missing.", 401));
+    }
+
+    if (!session) {
+      return next(new AppError("Session not found.", 404));
+    }
+
+    if (session.revoked) {
+      return next(new AppError("Session revoked.", 401));
+    }
+
+    const isValid = await session.validRefreshToken(token);
+
+    if (!isValid) {
+      session.revoked = true;
+      await session.save();
+
+      return next(new AppError("Session compromised.", 401));
+    }
+
+    const user = await User.findById(session.uid);
+    if (!user) {
+      return next(new AppError("Unauthorized.", 401));
+    }
+
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    const hashedRefreshToken = await Session.hashRefreshToken(refreshToken);
+
+    session.refreshToken = hashedRefreshToken;
+    await session.save();
+
+    res.cookie(token_name, refreshToken, {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+      priority: "high",
+    });
+
+    res.status(200).json({
+      success: true,
+      accessToken,
+      message: "Tokens refreshed successfully.",
     });
   },
 );

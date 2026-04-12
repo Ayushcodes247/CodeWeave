@@ -5,7 +5,7 @@ import { env } from "@configs/env.config";
 import { asyncHandler, AppError } from "@utils/essential.util";
 
 interface verifiedSessionType extends JwtPayload {
-  id: string;
+  _id: string;
 }
 
 const TOKEN_NAME = "auth_token";
@@ -18,21 +18,38 @@ const validateSession = asyncHandler(
     }
 
     let verified: verifiedSessionType;
+
     try {
       verified = jwt.verify(token, env.SECRET, {
         algorithms: ["HS256"],
       }) as verifiedSessionType;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "TokenExpiredError") {
+        return next(new AppError("Refresh token expired.", 401));
+      }
       return next(new AppError("Unauthorized.", 401));
-    };
-
-    const session = await Session.find({ uid : verified._id , revoked : false });
-    const validRefreshToken = await session.validRefreshToken(token);
-    if(session){
-        next()
     }
 
-    console.log("Chal ")
+    const agent = req.get("user-agent");
+    const session = await Session.findOne({
+      uid: verified._id,
+      revoked: false,
+      agent: String(agent),
+    });
+
+    if (!session) {
+      return next(new AppError("Session not found.", 401));
+    }
+
+    const isValid = await session.validRefreshToken(token);
+
+    if (!isValid) {
+      return next(new AppError("Invalid refresh token.", 401));
+    }
+
+    req.session = session;
+
+    return next();
   },
 );
 

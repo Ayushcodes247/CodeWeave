@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
-import { AppError } from "utils/essential.util";
+import { AppError } from "@utils/essential.util";
 
 export const checkDBStatus = (
   req: Request,
