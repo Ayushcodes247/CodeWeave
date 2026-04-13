@@ -44,6 +44,8 @@
 
     "ignoreDeprecations": "6.0",
 
+    "esModuleInterop": true,
+
     "baseUrl": "./src",
 
     "paths": {

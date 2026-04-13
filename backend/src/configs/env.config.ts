@@ -8,6 +8,7 @@ export interface EnvConfiguration {
   ORIGIN : string; 
   SECRET : string;
   BASE_URL : string;
+  TEST_DB : string;
 }
 
 export const env: EnvConfiguration = {
@@ -16,7 +17,8 @@ export const env: EnvConfiguration = {
   NODE_ENV: process.env.NODE_ENV || "development",
   ORIGIN : process.env.ORIGIN || "*",
   SECRET : process.env.JWT_SECRET || "your secret key",
-  BASE_URL : process.env.BASE_URL || "your base url."
+  BASE_URL : process.env.BASE_URL || "your base url.",
+  TEST_DB : process.env.TEST_DB_URI || "test_db",
 };
 
 if(!env){
