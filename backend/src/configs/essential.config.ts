@@ -4,7 +4,7 @@ export const time = (): string => new Date().toISOString();
 
 export const routeLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 50,
+  max: 10000,
   standardHeaders: true,
   legacyHeaders: false,
   statusCode: 429,

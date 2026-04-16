@@ -18,7 +18,7 @@
     "test:watch": "jest --watch",
     "test:dev": "jest --runInBand",
     "dev:server": "ts-node-dev -r tsconfig-paths/register --respawn src/server.ts",
-    "build": "tsc --watch",
+    "build": "tsc -p tsconfig.build.json --watch",
     "build:server": "npx nodemon -r module-alias/register dist/server.js",
     "start": "node -r module-alias/register dist/server.js"
   },

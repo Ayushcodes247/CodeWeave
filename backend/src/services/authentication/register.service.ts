@@ -20,11 +20,6 @@ const registerUser = async (userData: Partial<IUser>): Promise<ReturnType> => {
     throw new AppError("Please provide valid user data.", 400);
   }
 
-  const exists = await User.findOne({ email: userData.email! });
-  if (exists) {
-    throw new AppError("User Already exists.", 409);
-  }
-
   const { value, error } = validateUser({
     ...userData,
     provider: "local",

@@ -34,6 +34,11 @@ export const register = asyncHandler(
 
     const userData = { username, email, password, gender, profilePic };
 
+    const exists = await User.findOne({ email: userData.email! });
+    if (exists) {
+      return next(new AppError("User Already exists.", 409));
+    }
+
     const { accessToken, refreshToken, user } = await registerUser(userData);
 
     const sessionData = {
