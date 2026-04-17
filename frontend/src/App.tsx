@@ -1,8 +1,17 @@
 import React from 'react'
+import { Route , Routes } from 'react-router-dom'
+import Home from './Components/Home/Home'
+import Login from './Components/Login/Login'
+import Register from './Components/Register/Register'
 
 const App = () => {
+
   return (
-    <div className='h-100 w-100 bg-amber-600'>App</div>
+    <Routes>
+      <Route path='/' element={<Home/>} />
+      <Route path='/login' element={<Login/>} />
+      <Route path='/register' element={<Register/>} />
+    </Routes>
   )
 }
 
