@@ -5,6 +5,7 @@ interface AuthenticationState {
   accessToken: string | null;
   isAuthenticated: boolean;
   loading: boolean;
+  authChecked: boolean;
 }
 
 const initialState: AuthenticationState = {
@@ -12,6 +13,7 @@ const initialState: AuthenticationState = {
   accessToken: null,
   isAuthenticated: false,
   loading: false,
+  authChecked: false,
 };
 
 const AuthenticationSlice = createSlice({
@@ -22,11 +24,13 @@ const AuthenticationSlice = createSlice({
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
       state.isAuthenticated = true;
+      state.authChecked = true;
     },
     clearAuthenticationState(state) {
       state.user = null;
       state.accessToken = null;
       state.isAuthenticated = false;
+      state.authChecked = false;
     },
     setLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload;

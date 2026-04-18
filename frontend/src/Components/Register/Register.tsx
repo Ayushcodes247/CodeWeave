@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaEye } from "react-icons/fa";
+import { useAppDispatch, useAppSelector } from "../../services/hook";
+import { registerUser } from "../../features/authentication/authThunk";
 
 const Register = () => {
   document.title = "Code  weave | Register";
@@ -24,15 +26,28 @@ const Register = () => {
   const [isclicked, setIsclicked] = useState(false);
   const [pass, setPass] = useState("");
 
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { authChecked } = useAppSelector((state: any) => state.authentication);
+
   return (
     <main>
       <form
-        onSubmit={handleSubmit((data) => {
-          console.log("Register Data:", data);
-
+        onSubmit={handleSubmit(async (data) => {
           reset();
           setPass("");
           setIsclicked(false);
+
+          const response = await dispatch(registerUser(data)).unwrap();
+          console.log("Register response:", response);
+          try {
+            const response = await dispatch(registerUser(data)).unwrap();
+            if (response) {
+              navigate("/dashboard");
+            }
+          } catch (err) {
+            console.error(err);
+          }
         })}
       >
         <input

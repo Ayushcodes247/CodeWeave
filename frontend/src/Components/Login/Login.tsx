@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaEye } from "react-icons/fa";
+import { loginUser } from "../../features/authentication/authThunk";
+import { useAppDispatch, useAppSelector } from "../../services/hook";
 
 const Login = () => {
   document.title = "Code weave | Login";
@@ -22,6 +24,10 @@ const Login = () => {
   const [isclicked, setIsclicked] = useState(false);
   const [pass, setPass] = useState("");
 
+  const dispatch = useAppDispatch();
+  const { authChecked } = useAppSelector((state: any) => state.authentication);
+  const navigate = useNavigate();
+
   return (
     <main>
       {" "}
@@ -30,12 +36,19 @@ const Login = () => {
         {" "}
         {/* Form Card */}
         <form
-          onSubmit={handleSubmit((data) => {
-            console.log("Login Data:", data);
-
+          onSubmit={handleSubmit(async (data) => {
             reset();
             setIsclicked(false);
             setPass("");
+
+            try {
+              const response = await dispatch(loginUser(data)).unwrap();
+              if (response) {
+                navigate("/dashboard");
+              }
+            } catch (err) {
+              console.error(err);
+            }
           })}
         >
           <input
@@ -67,7 +80,7 @@ const Login = () => {
             }}
             onClick={() => setIsclicked(!isclicked)}
           />
-          <FaEye/>
+          <FaEye />
           {errors.password && <p>{errors.password.message}</p>}
 
           <div>
