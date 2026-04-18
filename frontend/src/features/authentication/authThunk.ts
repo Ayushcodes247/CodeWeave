@@ -111,3 +111,26 @@ export const logoutUserOne = createAsyncThunk(
     return data;
   },
 );
+
+export const logoutUserAll = createAsyncThunk(
+  "authorization/logout-all",
+  async (_, { dispatch }) => {
+    const token = Store.getState().authentication.accessToken;
+    const { status, data } = await api.post(
+      `${import.meta.env.VITE_BASE_URL}/auth/logout-all`,
+      {},
+      {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (status === 200) {
+      dispatch(clearAuthenticationState());
+    }
+
+    return data;
+  },
+);

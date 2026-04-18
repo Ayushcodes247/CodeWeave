@@ -39,7 +39,6 @@ const Register = () => {
           setIsclicked(false);
 
           const response = await dispatch(registerUser(data)).unwrap();
-          console.log("Register response:", response);
           try {
             const response = await dispatch(registerUser(data)).unwrap();
             if (response) {

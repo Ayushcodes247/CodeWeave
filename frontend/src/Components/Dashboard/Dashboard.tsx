@@ -1,7 +1,8 @@
 import React from "react";
 import { useAppDispatch } from "../../services/hook";
-import { logoutUserOne } from "../../features/authentication/authThunk";
+import { logoutUserOne , logoutUserAll } from "../../features/authentication/authThunk";
 import { useNavigate } from "react-router-dom";
+
 
 const Dashboard = () => {
   const dispatch = useAppDispatch();
@@ -17,6 +18,13 @@ const Dashboard = () => {
       }
       response.payload.message
     }}>Logout</button>
+     <button onClick={async () => {
+      const response  = await dispatch(logoutUserAll());
+      if(response.payload){
+        navigate("/login");
+      }
+      response.payload.message
+    }}>Logout All device</button>
   </div>;
 };
 
