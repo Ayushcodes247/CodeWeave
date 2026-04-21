@@ -1,0 +1,21 @@
+DARK THEME COLOR - 1:-
+button color = tea green = #D4FB54
+text color = white smoke = #F5F5F5
+background color = night = #0E100F
+container color = midnight = #171918,#1E1E1E
+complimantery color = ash gray = #656964, #202221, #FF1C64
+eye = #6F7170
+
+DARK THEME COLOR - 2:-
+background color = #020202
+text color = #F8F7F9
+button color = #92DCE5
+container color = #171918
+complimantery color = #656964, #202221, #ff1c60
+
+LIGHT THEME COLOR :-
+background color = #F8F7F9
+text color = #020202
+button color = #D4FB54, #8DFFCD, #A9E190
+container color = #F8F7F5
+complimantery color = #202221, #ff1c3a

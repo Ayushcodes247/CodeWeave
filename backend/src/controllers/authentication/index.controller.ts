@@ -7,6 +7,8 @@ import inValidateToken from "@services/authentication/logout.service";
 import sessionService from "@services/authentication/session.service";
 import { Session } from "@models/session.model";
 import { User } from "@models/user.model";
+import { HydratedDocument } from "mongoose";
+import { IUser } from "@models/user.model";
 
 const token_name = "auth_token";
 
@@ -23,6 +25,7 @@ export const register = asyncHandler(
     const genderMap: Record<string, string> = {
       male: "male.png",
       female: "female.png",
+      unknown: "unknown.png",
     };
 
     const image = genderMap[gender];
@@ -124,7 +127,7 @@ export const profile = asyncHandler(
 export const logout = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const refreshToken = req.cookies?.[token_name];
-    const user = req.user;
+    const user = req.user as HydratedDocument<IUser>;
     const accessToken = req.headers.authorization?.startsWith("Bearer ")
       ? req.headers.authorization.split(" ")[1]
       : null;
@@ -174,7 +177,7 @@ export const logout = asyncHandler(
 
 export const logoutAll = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const user = req.user;
+    const user = req.user as HydratedDocument<IUser>;
 
     const accessToken = req.headers.authorization?.startsWith("Bearer ")
       ? req.headers.authorization.split(" ")[1]
@@ -213,7 +216,7 @@ export const logoutAll = asyncHandler(
 export const refresh = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const token = req.cookies?.[token_name];
-    const session = req.session;
+    const session = req.dbSession;
 
     if (!token) {
       return next(new AppError("Refresh token missing.", 401));

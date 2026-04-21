@@ -1,6 +1,6 @@
 import express from "express";
 import { routeLimiter } from "@configs/essential.config";
-import { register , login, profile, logout, logoutAll, refresh} from "@controllers/authentication/index.controller";
+import { register , login, profile, logout, logoutAll, refresh } from "@controllers/authentication/index.controller";
 import isAuthenticated from "@middlewares/auth.middleware";
 import validateSession from "@middlewares/session.middleware";
 

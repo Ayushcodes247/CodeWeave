@@ -1,17 +1,18 @@
-import { Model, Schema, Document, ObjectId, model } from "mongoose";
+import { Model, Schema, Document, Types, model } from "mongoose";
 import Joi, { ValidationResult } from "joi";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { env } from "@configs/env.config";
 
 export interface IUser extends Document {
+  _id: Types.ObjectId;
   username: string;
   email: string;
   password: string;
   provider: "local" | "github";
   githubID?: string;
   profilePic?: string;
-  rooms?: ObjectId[];
+  rooms?: Types.ObjectId[];
   gender: string;
   comparePassword(password: string): Promise<boolean>;
   generateAccessToken(): string;
@@ -35,9 +36,10 @@ const userSchema: Schema<IUser, IUserModel> = new Schema(
 
     email: {
       type: String,
-      required: true,
+      required: function (): boolean {
+        return this.provider === "local";
+      },
       lowercase: true,
-      unique: true,
       trim: true,
       match: [
         /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
@@ -56,9 +58,11 @@ const userSchema: Schema<IUser, IUserModel> = new Schema(
 
     gender: {
       type: String,
-      required: true,
-      enum: ["male", "female"],
-      default: "male",
+      required: function (): boolean {
+        return this.provider === "local";
+      },
+      enum: ["male", "female", "unknown"],
+      default: "unknown",
     },
 
     provider: {
@@ -87,7 +91,7 @@ const userSchema: Schema<IUser, IUserModel> = new Schema(
 
     rooms: [
       {
-        types: Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         // ref: "Room",
       },
     ],
@@ -105,7 +109,12 @@ userSchema.index(
   },
 );
 
-userSchema.index({ username: 1, email: 1 });
+userSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: "string" } } },
+);
+
+userSchema.index({ username: 1 });
 
 userSchema.methods.generateAccessToken = function (): string {
   return jwt.sign({ _id: this._id }, env.SECRET, {
@@ -136,7 +145,9 @@ userSchema.statics.hashPassword = async function (
 export const validateUser = (user: object): ValidationResult => {
   const schema = Joi.object({
     username: Joi.string().max(50).min(2).required(),
-    email: Joi.string().email().required(),
+    email: Joi.string()
+      .email()
+      .when("provider", { is: "local", then: Joi.required() }),
     password: Joi.string()
       .min(4)
       .when("provider", { is: "local", then: Joi.required() }),
@@ -145,7 +156,10 @@ export const validateUser = (user: object): ValidationResult => {
       is: "github",
       then: Joi.required(),
     }),
-    gender: Joi.string().valid("male", "female").default("male").required(),
+    gender: Joi.string()
+      .valid("male", "female", "unknown")
+      .default("unknown")
+      .when("provider", { is: "local", then: Joi.required() }),
     profilePic: Joi.string().uri().optional(),
     rooms: Joi.array().items(Joi.string().hex().length(24)).optional(),
   }).unknown(false);

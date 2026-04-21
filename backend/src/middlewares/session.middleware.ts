@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { Session } from "@models/session.model";
+import { Session , ISession } from "@models/session.model";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { env } from "@configs/env.config";
 import { asyncHandler, AppError } from "@utils/essential.util";
@@ -47,7 +47,7 @@ const validateSession = asyncHandler(
       return next(new AppError("Invalid refresh token.", 401));
     }
 
-    req.session = session;
+    req.dbSession = session;
 
     return next();
   },
