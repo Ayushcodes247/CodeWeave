@@ -92,7 +92,7 @@ const userSchema: Schema<IUser, IUserModel> = new Schema(
     rooms: [
       {
         type: Schema.Types.ObjectId,
-        // ref: "Room",
+        ref: "Room",
       },
     ],
   },

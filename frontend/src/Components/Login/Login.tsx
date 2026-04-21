@@ -49,7 +49,7 @@ const Login = () => {
               try {
                 const response = await dispatch(loginUser(data)).unwrap();
                 if (response) {
-                  navigate("/dashboard");
+                  navigate("/main");
                 }
               } catch (err) {
                 console.error(err);

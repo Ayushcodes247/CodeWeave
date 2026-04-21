@@ -30,11 +30,9 @@ const validateSession = asyncHandler(
       return next(new AppError("Unauthorized.", 401));
     }
 
-    const agent = req.get("user-agent");
     const session = await Session.findOne({
       uid: verified._id,
       revoked: false,
-      agent: String(agent),
     });
 
     if (!session) {

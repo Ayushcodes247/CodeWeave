@@ -51,7 +51,7 @@ const Register = () => {
               try {
                 const response = await dispatch(registerUser(data)).unwrap();
                 if (response) {
-                  navigate("/dashboard");
+                  navigate("/main");
                 }
               } catch (err) {
                 console.error(err);
