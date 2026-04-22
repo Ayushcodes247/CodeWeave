@@ -1,0 +1,37 @@
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { setRoom } from "./roomSlice";
+import api from "../../services/api";
+import { Store } from "../../store/store";
+
+export const create = createAsyncThunk(
+  "room/create",
+  async (
+    credentials: {
+      roomName: string;
+      mode: string;
+      maxMembers: number;
+    },
+    { dispatch },
+  ) => {
+    const token = Store.getState().authentication.accessToken;
+    const response = await api.post(
+      `${import.meta.env.VITE_BASE_URL}/room/create`,
+      credentials,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    dispatch(
+      setRoom({
+        room: response.data.room,
+        inviteCode: response.data.inviteCode,
+        loading: false,
+      }),
+    );
+
+    return response.data;
+  },
+);

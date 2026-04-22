@@ -1,6 +1,5 @@
-import React , { useState } from "react";
+import React from "react";
 import NavBar from "../NavBar/NavBar";
-import { motion, AnimatePresence } from "motion/react";
 import FormCard from "./FormCard/FormCard";
 import ContentCard from "./ContentCard/ContentCard";
 
