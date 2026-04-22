@@ -1,11 +1,11 @@
 import request from "supertest";
-import app from "../../../app";
+import app from "../../app";
 import mongoose from "mongoose";
 import { env } from "@configs/env.config";
 import { User } from "@models/user.model";
 import { Session } from "@models/session.model";
 
-describe("🔐 Full Auth Flow (Integration Test)", () => {
+describe("Full Auth Flow (Integration Test)", () => {
   let agent = request.agent(app);
 
   const userData = {

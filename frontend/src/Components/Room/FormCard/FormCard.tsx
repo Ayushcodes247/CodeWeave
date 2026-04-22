@@ -47,6 +47,10 @@ const FormCard = () => {
                   onClick={() => setClicked(false)}
                 />
               </h2>
+
+              <form  className="flex flex-col gap-3">
+                <input type="text" placeholder="Enter room name."/>
+              </form>
             </motion.div>
           </motion.div>
         )}
