@@ -2,6 +2,7 @@ import React from "react";
 import NavBar from "../NavBar/NavBar";
 import FormCard from "./FormCard/FormCard";
 import ContentCard from "./ContentCard/ContentCard";
+import SearchBar from "./SearchBar/SearchBar";
 
 const Room = () => {
   document.title = "CODEWEAVE | Rooms";
@@ -10,6 +11,9 @@ const Room = () => {
     <main className="min-h-screen w-full bg-[#121212] flex flex-col">
       <div className="pt-5 shrink-0">
         <NavBar />
+      </div>
+      <div className="pt-5 shrink-0">
+        <SearchBar/>
       </div>
 
       <div className="flex-1 w-full flex">
