@@ -3,6 +3,8 @@ import { AppError, asyncHandler } from "@utils/essential.util";
 import { IUser } from "@models/user.model";
 import { HydratedDocument } from "mongoose";
 import createService from "@services/rooms/createRoom.service";
+import searchService from "@services/rooms/search.service";
+import { Types } from "mongoose";
 
 export const create = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -32,6 +34,28 @@ export const create = asyncHandler(
       room,
       inviteCode,
       message: "Room created successfully.",
+    });
+  },
+);
+
+export const search = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { roomId } = req.body;
+
+    if (!roomId) {
+      throw new AppError("Invalid room id.", 400);
+    }
+
+    if (!Types.ObjectId.isValid(roomId)) {
+      throw new AppError("Invalid room id.", 400);
+    }
+
+    const { room, message } = await searchService(roomId);
+
+    res.status(200).json({
+      success: true,
+      room,
+      message,
     });
   },
 );
