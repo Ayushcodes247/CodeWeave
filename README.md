@@ -599,3 +599,395 @@ MONGODB_URI=mongodb://...
 ## Contact & Support
 
 For issues or questions, please refer to the main project documentation or contact the development team.
+
+---
+
+# Room Management API Documentation
+
+## Overview
+
+This document provides detailed information about the Room Management API routes for the Code-Weave application. The room system allows users to create and manage collaborative coding spaces with different access modes and member management.
+
+## Base URL
+
+```
+http://localhost:3000/api/rooms
+```
+
+or production:
+
+```
+https://yourdomain.com/api/rooms
+```
+
+---
+
+## API Endpoints
+
+### 1. **Create Room**
+
+Creates a new room for collaborative work.
+
+**Endpoint:**
+```
+POST /rooms/create
+```
+
+**Rate Limiting:** Yes (routeLimiter applied)
+
+**Authentication:** Required (Bearer token)
+
+**Request Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "roomName": "React Project",
+  "mode": "team",
+  "maxMembers": 5
+}
+```
+
+**Request Parameters:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `roomName` | string | Yes | Name of the room (2-50 characters) |
+| `mode` | string | Yes | Room mode - "solo" or "team" |
+| `maxMembers` | number | No | Maximum members allowed in the room |
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "room": {
+    "_id": "507f1f77bcf86cd799439012",
+    "roomname": "React Project",
+    "membersCount": 1
+  },
+  "inviteCode": "ABC123XYZ789",
+  "message": "Room created successfully."
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Message |
+|--------|------|---------|
+| 400 | BAD_REQUEST | roomName and mode are required |
+| 400 | BAD_REQUEST | Room with this name already exists |
+| 400 | BAD_REQUEST | Invalid room data / validation errors |
+| 401 | UNAUTHORIZED | Unauthorized |
+| 404 | NOT_FOUND | User not found |
+
+**Logic:**
+- Validates that roomName and mode are provided
+- Checks if a room with the same name already exists for this user
+- Verifies that the authenticated user exists
+- Creates the room with the authenticated user as owner
+- Automatically adds owner as first member with "owner" role
+- Generates a unique invite code for room access
+
+---
+
+### 2. **Search Room**
+
+Retrieves detailed information about a specific room.
+
+**Endpoint:**
+```
+POST /rooms/search
+```
+
+**Rate Limiting:** Yes (routeLimiter applied)
+
+**Authentication:** Required (Bearer token)
+
+**Request Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "roomId": "507f1f77bcf86cd799439012"
+}
+```
+
+**Request Parameters:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `roomId` | string | Yes | Valid MongoDB ObjectId of the room |
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "room": {
+    "_id": "507f1f77bcf86cd799439012",
+    "roomName": "React Project",
+    "ownerId": "507f1f77bcf86cd799439011",
+    "ownerName": "john_doe",
+    "mode": "team",
+    "lastActivatedAt": "2026-04-24T10:30:00.000Z",
+    "createdAt": "2026-04-20T15:45:30.000Z"
+  },
+  "message": "room searched successfully."
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Message |
+|--------|------|---------|
+| 400 | BAD_REQUEST | Invalid room id |
+| 401 | UNAUTHORIZED | Unauthorized |
+| 404 | NOT_FOUND | room not found |
+
+**Logic:**
+- Validates that roomId is provided
+- Validates that roomId is a valid MongoDB ObjectId format
+- Retrieves the room with owner details populated
+- Returns room information including owner details and creation timestamp
+- Updates and returns last activation time
+
+---
+
+## Room Model
+
+### Room Schema
+
+```javascript
+{
+  _id: ObjectId,
+  roomName: String,              // 2-50 characters, unique per owner
+  owner: ObjectId,               // Reference to User
+  mode: String,                  // "solo" or "team"
+  members: [
+    {
+      user: ObjectId,            // Reference to User
+      role: String               // "owner", "editor", or "viewer"
+    }
+  ],
+  files: [ObjectId],             // References to File documents
+  inviteCode: String,            // Hashed invite code
+  maxMembers: Number,            // Maximum allowed members
+  lastActiveAt: Date,            // Last activity timestamp
+  createdAt: Date,               // Room creation timestamp
+  updatedAt: Date                // Last update timestamp
+}
+```
+
+### Room Modes
+
+- **solo:** Single user room for personal coding projects
+- **team:** Collaborative room allowing multiple members with different roles
+
+### Member Roles
+
+- **owner:** Full access, can manage room and members
+- **editor:** Can create and edit files
+- **viewer:** Read-only access to room files
+
+---
+
+## Room Invite Codes
+
+### Invite Code Features
+
+- **Format:** Randomly generated alphanumeric string
+- **Security:** Stored as hashed value in database
+- **Lifecycle:** Generated on room creation, can be regenerated
+- **Usage:** Used to join existing rooms as a new member
+
+### Invite Code Flow
+
+1. Room is created with a unique invite code
+2. Owner can share the invite code with others
+3. Other users use the invite code to join the room
+4. Once joined, user is added to room's members list
+
+---
+
+## Error Handling
+
+All errors follow a standard format:
+
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "statusCode": 400
+}
+```
+
+### Common Room Error Codes
+
+| Status | Meaning |
+|--------|---------|
+| 400 | Bad Request - Invalid input, missing fields, or duplicate room name |
+| 401 | Unauthorized - Authentication required or token invalid |
+| 404 | Not Found - Room or user doesn't exist |
+
+---
+
+## Security Considerations
+
+### 1. **Access Control**
+- Only authenticated users can create or search rooms
+- Users can only access rooms they are members of (enforced at service level)
+
+### 2. **Room Uniqueness**
+- Room names are unique per owner (two users can have rooms with same name)
+- Prevents accidental duplicate room creation
+
+### 3. **Invite Codes**
+- Invite codes are hashed before storage
+- Prevents exposure of actual codes in database
+- Can be regenerated by room owner
+
+### 4. **Member Management**
+- Different role-based access levels (owner, editor, viewer)
+- Prevents unauthorized modifications
+- Maintains audit trail through createdAt/updatedAt timestamps
+
+---
+
+## Usage Examples
+
+### Example Flow: Create and Retrieve Room
+
+**Step 1: Create Room**
+```bash
+curl -X POST http://localhost:3000/api/rooms/create \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roomName": "React Project",
+    "mode": "team",
+    "maxMembers": 5
+  }'
+```
+
+Response:
+```json
+{
+  "success": true,
+  "room": {
+    "_id": "507f1f77bcf86cd799439012",
+    "roomname": "React Project",
+    "membersCount": 1
+  },
+  "inviteCode": "ABC123XYZ789",
+  "message": "Room created successfully."
+}
+```
+
+**Step 2: Search Room**
+```bash
+curl -X POST http://localhost:3000/api/rooms/search \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roomId": "507f1f77bcf86cd799439012"
+  }'
+```
+
+Response:
+```json
+{
+  "success": true,
+  "room": {
+    "_id": "507f1f77bcf86cd799439012",
+    "roomName": "React Project",
+    "ownerId": "507f1f77bcf86cd799439011",
+    "ownerName": "john_doe",
+    "mode": "team",
+    "lastActivatedAt": "2026-04-24T10:30:00.000Z",
+    "createdAt": "2026-04-20T15:45:30.000Z"
+  },
+  "message": "room searched successfully."
+}
+```
+
+### Example Flow: Multi-User Collaboration
+
+**User 1: Create Team Room**
+```bash
+curl -X POST http://localhost:3000/api/rooms/create \
+  -H "Authorization: Bearer <user1_token>" \
+  -d '{"roomName": "Team Project", "mode": "team"}'
+```
+
+Gets `inviteCode: "ABC123XYZ789"`
+
+**User 2: Search and Join Room**
+```bash
+# First search to verify room exists
+curl -X POST http://localhost:3000/api/rooms/search \
+  -H "Authorization: Bearer <user2_token>" \
+  -d '{"roomId": "507f1f77bcf86cd799439012"}'
+
+# Then join using invite code (endpoint not documented yet)
+```
+
+---
+
+## Related Models
+
+### User Model (Reference)
+- `_id`: MongoDB ObjectId
+- `username`: Unique username
+- `email`: Unique email address
+
+### File Model (Reference)
+- `_id`: MongoDB ObjectId
+- `roomId`: Reference to Room
+- `content`: File content
+- `language`: Programming language
+
+---
+
+## Environment Configuration
+
+Room management uses the same environment configuration as authentication:
+
+```env
+PORT=3000
+NODE_ENV=development|production
+BASE_URL=http://localhost:3000
+MONGODB_URI=mongodb://...
+```
+
+---
+
+## Support & Troubleshooting
+
+### Issue: "Room with this name already exists"
+- **Cause:** User already created a room with this name
+- **Solution:** Use a different room name or delete the existing room
+
+### Issue: "room not found"
+- **Cause:** Room ID doesn't exist or user doesn't have access
+- **Solution:** Verify room ID is correct and user has access to the room
+
+### Issue: "Invalid room id"
+- **Cause:** Provided room ID is not a valid MongoDB ObjectId format
+- **Solution:** Ensure room ID is a valid 24-character hexadecimal string
+
+### Issue: "roomName and mode are required"
+- **Cause:** Missing required fields in request body
+- **Solution:** Include both roomName and mode fields in the request
+
+---
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2026-04-24 | Initial room management documentation |
+
+---

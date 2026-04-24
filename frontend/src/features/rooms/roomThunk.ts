@@ -35,3 +35,29 @@ export const create = createAsyncThunk(
     return response.data;
   },
 );
+
+export const search = createAsyncThunk(
+  "room/search",
+  async (credential: { roomId: string }, { dispatch }) => {
+    const token = Store.getState().authentication.accessToken;
+    const response = await api.post(
+      `${import.meta.env.VITE_BASE_URL}/room/search`,
+      credential,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    dispatch(
+      setRoom({
+        room: response.data.room,
+        inviteCode: null,
+        loading: false,
+      }),
+    );
+
+    return response.data;
+  },
+);
