@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { FaSearch, FaUserPlus, FaCopy } from "react-icons/fa";
+import { FaSearch, FaCopy } from "react-icons/fa";
 import { motion, AnimatePresence } from "motion/react";
 import { useForm } from "react-hook-form";
 import { useAppDispatch } from "../../../services/hook";
 import { search } from "../../../features/rooms/roomThunk";
+import { IoMdCloseCircle } from "react-icons/io";
+import RequestJoin from "./RequestJoin";
 
 const SearchBar = () => {
   const [clicked, setIsClicked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [room, setRoom] = useState<any>(null);
-  const [ requestClicked, setRequestClicked ] = useState<boolean>(false);
   const {
     setValue,
     reset,
@@ -210,18 +211,7 @@ const SearchBar = () => {
                           </motion.button>
 
                           {/* Request Join */}
-                          <motion.button
-                          onClick={() => setRequestClicked(true)}
-                            whileTap={{ scale: 0.9 }}
-                            whileHover={{ scale: 1.05 }}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-md
-                            bg-[#D6FE50] text-black text-sm font-medium
-                            shadow-md hover:shadow-[0_0_12px_#D6FE50]
-                            transition-all duration-200"
-                          >
-                            <FaUserPlus size={12} />
-                            Request Join
-                          </motion.button>
+                            <RequestJoin/>
                         </div>
                       </div>
                     </motion.div>
@@ -232,6 +222,7 @@ const SearchBar = () => {
           </motion.div>
         )}
       </AnimatePresence>
+     
     </div>
   );
 };
