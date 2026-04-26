@@ -1,7 +1,7 @@
 import { RequestModel } from "@models/request.model";
-import { Room } from "@models/room.model";
-import { Types } from "mongoose";
 import { AppError } from "@utils/essential.util";
+import { Types } from "mongoose";
+import { Room } from "@models/room.model";
 
 interface DataType {
   roomId: Types.ObjectId;
@@ -21,7 +21,7 @@ interface ReturnDataType {
   message: string;
 }
 
-const acceptService = async (data: DataType): Promise<ReturnDataType> => {
+const rejectService = async (data: DataType): Promise<ReturnDataType> => {
   if (!data || !data.roomId || !data.uid) {
     throw new AppError("Please provide valid user data.", 400);
   }
@@ -29,39 +29,23 @@ const acceptService = async (data: DataType): Promise<ReturnDataType> => {
   const request = await RequestModel.findOne({
     roomId: data.roomId,
     uid: data.uid,
-    status: "pending",
   });
 
   if (!request) {
     throw new AppError("Request not found.", 404);
   }
 
-  const room = await Room.findById(request.roomId);
+  if (request.status !== "pending") {
+    throw new AppError("Request already processed.", 400);
+  }
+
+  const room = await Room.findById(request.roomId).select("roomName");
   if (!room) {
     throw new AppError("Room not found.", 404);
   }
 
-  const alreadyMember = room.members.some(
-    (m) => m.user.toString() === request.uid.toString(),
-  );
-
-  if (alreadyMember) {
-    throw new AppError("User already in room.", 400);
-  }
-
-  if (room.members.length >= room.maxMembers) {
-    throw new AppError("Room is full.", 400);
-  }
-
-  request.status = "fulfilled";
+  request.status = "rejected";
   await request.save();
-
-  room.members.push({
-    user: request.uid,
-    role: "viewer",
-  });
-
-  await room.save();
 
   return {
     reqsReturn: {
@@ -71,8 +55,8 @@ const acceptService = async (data: DataType): Promise<ReturnDataType> => {
       uid: request.uid,
       status: request.status,
     },
-    message: "Request accepted successfully.",
+    message: "Request rejected successfully.",
   };
 };
 
-export default acceptService;
+export default rejectService;
