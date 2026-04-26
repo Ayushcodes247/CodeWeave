@@ -60,6 +60,3 @@ export const search = asyncHandler(
   },
 );
 
-export const requests = asyncHandler(async (req : Request, response : Response, next : NextFunction) => {
-  
-});
