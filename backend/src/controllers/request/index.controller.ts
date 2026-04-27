@@ -8,6 +8,7 @@ import acceptService from "@services/request/accept.service";
 import { Room } from "@models/room.model";
 import { Types } from "mongoose";
 import rejectService from "@services/request/reject.service";
+import getRequesterRequestService from "@services/request/getRequesterRequest.service";
 
 export const requests = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -127,6 +128,32 @@ export const getRequests = asyncHandler(
       requests,
       message,
       pagination,
+    });
+  },
+);
+
+export const requesterRequest = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = req.user as HydratedDocument<IUser>;
+
+    if (!user) {
+      throw new AppError("Unauthorized.", 401);
+    }
+
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    const { requests, pagination, message } = await getRequesterRequestService({
+      _id: user._id,
+      page,
+      limit,
+    });
+
+    res.status(200).json({
+      success: true,
+      requests,
+      pagination,
+      message,
     });
   },
 );
