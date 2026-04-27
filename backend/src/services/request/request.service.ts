@@ -2,6 +2,7 @@ import { RequestModel, validateRequest } from "@models/request.model";
 import { Types } from "mongoose";
 import { Room } from "@models/room.model";
 import { AppError } from "@utils/essential.util";
+import { getIO } from "@/socket";
 
 interface RequestDataType {
   uid: Types.ObjectId | string;
@@ -74,6 +75,13 @@ const requestService = async (
   }
 
   const request = await RequestModel.create(value);
+  const io = getIO();
+
+  io.to(`user:${room.owner._id}`).emit("request:new", {
+    roomId: room._id,
+    requesterId: request.uid,
+    roomName: room.roomName,
+  });
 
   return {
     requestData: {

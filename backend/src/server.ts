@@ -3,6 +3,7 @@ import http from "http";
 import { env } from "@configs/env.config";
 import { time } from "@configs/essential.config";
 import { connectTODB } from "@configs/db.config";
+import { InitializeSocketServer } from "./socket";
 
 const server = http.createServer(app);
 const PORT = env.PORT;
@@ -10,6 +11,8 @@ const PORT = env.PORT;
 (async (): Promise<void> => {
   try {
     await connectTODB();
+    InitializeSocketServer(server);
+
     server.listen(PORT, (): void => {
       console.info(`[${time()}] Server is running on port: ${env.PORT}`);
     });

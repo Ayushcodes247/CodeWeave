@@ -756,6 +756,782 @@ Authorization: Bearer <access_token>
 
 ---
 
+# Request Management API Documentation
+
+## Overview
+
+This document provides detailed information about the Request Management API routes for the Code-Weave application. The request system allows users to request access to join collaborative rooms and enables room owners to manage these requests through accept/reject mechanisms.
+
+## Base URL
+
+```
+http://localhost:3000/api/requests
+```
+
+or production:
+
+```
+https://yourdomain.com/api/requests
+```
+
+---
+
+## API Endpoints
+
+### 1. **Create Room Access Request**
+
+Creates a new request to join a room with a valid invite code. Users can request to join rooms created by other users.
+
+**Endpoint:**
+```
+POST /requests
+```
+
+**Rate Limiting:** Yes (routeLimiter applied)
+
+**Authentication:** Required (Bearer token)
+
+**Request Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "roomId": "507f1f77bcf86cd799439012",
+  "inviteCode": "ABC123XYZ789"
+}
+```
+
+**Request Parameters:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `roomId` | string | Yes | Valid MongoDB ObjectId of the target room |
+| `inviteCode` | string | Yes | Invite code shared by the room owner |
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "requestData": {
+    "_id": "507f1f77bcf86cd799439013",
+    "status": "pending",
+    "roomName": "React Project",
+    "roomId": "507f1f77bcf86cd799439012"
+  },
+  "message": "Request created successfully."
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Message |
+|--------|------|---------|
+| 400 | BAD_REQUEST | Please provide valid room data |
+| 404 | NOT_FOUND | Room not found |
+| 401 | UNAUTHORIZED | Owner can not make request to it's own room |
+| 401 | UNAUTHORIZED | Invalid invite code |
+| 400 | BAD_REQUEST | Request already exists |
+| 400 | BAD_REQUEST | Room is full |
+| 401 | UNAUTHORIZED | Unauthorized |
+
+**Logic:**
+- Validates that roomId and inviteCode are provided
+- Verifies the room exists
+- Checks if requester is not the room owner
+- Validates the invite code against stored hash
+- Ensures no duplicate request exists for this user and room
+- Verifies room has capacity for new members
+- Creates request with "pending" status
+- Emits socket event to room owner
+
+**Socket Events Emitted:**
+- `request:new` - Notified to room owner when new request is created
+
+---
+
+### 2. **Accept Room Access Request**
+
+Accepts a pending room access request and adds the user as a member to the room. Only room owner can accept requests.
+
+**Endpoint:**
+```
+PATCH /requests/accept
+```
+
+**Rate Limiting:** Yes (routeLimiter applied)
+
+**Authentication:** Required (Bearer token)
+
+**Request Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "roomId": "507f1f77bcf86cd799439012",
+  "uid": "507f1f77bcf86cd799439014"
+}
+```
+
+**Request Parameters:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `roomId` | string | Yes | Valid MongoDB ObjectId of the room |
+| `uid` | string | Yes | Valid MongoDB ObjectId of the requester user |
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "reqsReturn": {
+    "_id": "507f1f77bcf86cd799439013",
+    "roomName": "React Project",
+    "roomId": "507f1f77bcf86cd799439012",
+    "uid": "507f1f77bcf86cd799439014",
+    "status": "fulfilled"
+  },
+  "message": "Request accepted successfully."
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Message |
+|--------|------|---------|
+| 400 | BAD_REQUEST | roomId and uid are required |
+| 400 | BAD_REQUEST | Invalid roomId or uid |
+| 404 | NOT_FOUND | Room not found |
+| 403 | FORBIDDEN | Only owner can accept requests |
+| 404 | NOT_FOUND | Request not found |
+| 400 | BAD_REQUEST | User already in room |
+| 400 | BAD_REQUEST | Room is full |
+| 401 | UNAUTHORIZED | Unauthorized |
+
+**Logic:**
+- Validates roomId and uid are provided and valid
+- Ensures authenticated user is the room owner
+- Retrieves pending request for the user and room
+- Checks user is not already a member
+- Verifies room has capacity
+- Updates request status to "fulfilled"
+- Adds user to room members list with "viewer" role
+- Saves both request and room documents
+- Emits socket event to requester
+
+**Socket Events Emitted:**
+- `request:accepted` - Notified to requester with room details
+
+---
+
+### 3. **Reject Room Access Request**
+
+Rejects a pending room access request. Only room owner can reject requests. Request must be in "pending" status.
+
+**Endpoint:**
+```
+PATCH /requests/reject
+```
+
+**Rate Limiting:** Yes (routeLimiter applied)
+
+**Authentication:** Required (Bearer token)
+
+**Request Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "roomId": "507f1f77bcf86cd799439012",
+  "uid": "507f1f77bcf86cd799439014"
+}
+```
+
+**Request Parameters:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `roomId` | string | Yes | Valid MongoDB ObjectId of the room |
+| `uid` | string | Yes | Valid MongoDB ObjectId of the requester user |
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "reqsReturn": {
+    "_id": "507f1f77bcf86cd799439013",
+    "roomName": "React Project",
+    "roomId": "507f1f77bcf86cd799439012",
+    "uid": "507f1f77bcf86cd799439014",
+    "status": "rejected"
+  },
+  "message": "Request rejected successfully."
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Message |
+|--------|------|---------|
+| 400 | BAD_REQUEST | roomId and uid are required |
+| 400 | BAD_REQUEST | Invalid roomId or uid |
+| 404 | NOT_FOUND | Room not found |
+| 403 | FORBIDDEN | Only owner can reject requests |
+| 404 | NOT_FOUND | Request not found |
+| 400 | BAD_REQUEST | Request already processed |
+| 401 | UNAUTHORIZED | Unauthorized |
+
+**Logic:**
+- Validates roomId and uid are provided and valid
+- Ensures authenticated user is the room owner
+- Retrieves request and verifies it exists
+- Checks request is in "pending" status (not already accepted/rejected)
+- Updates request status to "rejected"
+- Saves request document
+- Emits socket event to requester
+
+**Socket Events Emitted:**
+- `request:rejected` - Notified to requester with rejection details
+
+---
+
+### 4. **Get All Pending Requests for Room Owner**
+
+Retrieves all pending/processed requests for rooms owned by the authenticated user. Used by room owners to see who has requested access.
+
+**Endpoint:**
+```
+GET /requests/all-general
+```
+
+**Rate Limiting:** Yes (routeLimiter applied)
+
+**Authentication:** Required (Bearer token)
+
+**Request Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:** (Optional)
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | number | 1 | Page number for pagination |
+| `limit` | number | 10 | Number of records per page (max 50) |
+
+**Response (200 OK):**
+```json
+{
+  "requests": [
+    {
+      "_id": "507f1f77bcf86cd799439013",
+      "roomId": "507f1f77bcf86cd799439012",
+      "requesterId": "507f1f77bcf86cd799439014",
+      "status": "pending",
+      "roomName": "React Project"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439015",
+      "roomId": "507f1f77bcf86cd799439012",
+      "requesterId": "507f1f77bcf86cd799439016",
+      "status": "fulfilled",
+      "roomName": "React Project"
+    }
+  ],
+  "pagination": {
+    "total": 5,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1
+  },
+  "message": "Requests fetched successfully."
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Message |
+|--------|------|---------|
+| 400 | BAD_REQUEST | Please provide valid user data |
+| 401 | UNAUTHORIZED | Unauthorized |
+
+**Logic:**
+- Validates authenticated user exists
+- Uses user ID to find all rooms owned by user
+- Retrieves all requests (pending, fulfilled, rejected) for owned rooms
+- Applies pagination with default page=1, limit=10
+- Limits pagination to prevent excessive data transfer (max 50 per page)
+- Performs aggregation pipeline to lookup room details
+- Returns requests sorted by creation date (newest first)
+- Includes total count and pagination metadata
+
+---
+
+### 5. **Get All Requests Made by User**
+
+Retrieves all requests created by the authenticated user (both pending and processed). Shows user's request history and current status.
+
+**Endpoint:**
+```
+GET /requests/all-requester
+```
+
+**Rate Limiting:** Yes (routeLimiter applied)
+
+**Authentication:** Required (Bearer token)
+
+**Request Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:** (Optional)
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | number | 1 | Page number for pagination |
+| `limit` | number | 10 | Number of records per page (max 50) |
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "requests": [
+    {
+      "_id": "507f1f77bcf86cd799439013",
+      "roomId": "507f1f77bcf86cd799439012",
+      "uid": "507f1f77bcf86cd799439014",
+      "status": "pending",
+      "roomName": "React Project"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439017",
+      "roomId": "507f1f77bcf86cd799439018",
+      "uid": "507f1f77bcf86cd799439014",
+      "status": "fulfilled",
+      "roomName": "Node.js Backend"
+    }
+  ],
+  "pagination": {
+    "total": 3,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1
+  },
+  "message": "Requests fetched successfully."
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Message |
+|--------|------|---------|
+| 400 | BAD_REQUEST | Please provide valid user data |
+| 401 | UNAUTHORIZED | Unauthorized |
+
+**Logic:**
+- Validates authenticated user exists
+- Retrieves all requests created by user (uid matches authenticated user)
+- Applies pagination with default page=1, limit=10
+- Limits pagination to prevent excessive data transfer (max 50 per page)
+- Performs aggregation pipeline to lookup room details
+- Returns requests sorted by creation date (newest first)
+- Includes total count and pagination metadata
+- Returns both pending and completed requests
+
+---
+
+## Request Model
+
+### Request Schema
+
+```javascript
+{
+  _id: ObjectId,
+  uid: ObjectId,                 // Reference to User (requester)
+  roomId: ObjectId,              // Reference to Room
+  status: String,                // "pending", "fulfilled", or "rejected"
+  createdAt: Date,               // Request creation timestamp
+  updatedAt: Date                // Last update timestamp
+}
+```
+
+### Request Status Types
+
+- **pending:** Request submitted, awaiting owner decision
+- **fulfilled:** Request accepted, user added to room members
+- **rejected:** Request declined by room owner
+
+### Request Indexes
+
+- Unique index on `(uid, roomId)` - Prevents duplicate requests from same user for same room
+- Index on `roomId` - Optimizes queries by room
+- Index on `status` - Optimizes filtering by status
+
+---
+
+## Real-time Socket Events
+
+The request system emits real-time events via Socket.io to notify users of changes:
+
+### Socket Event: `request:new`
+**Emitted to:** Room owner
+**Payload:**
+```json
+{
+  "roomId": "507f1f77bcf86cd799439012",
+  "requesterId": "507f1f77bcf86cd799439014",
+  "roomName": "React Project",
+  "timestamp": "2026-04-27T10:30:00.000Z"
+}
+```
+
+### Socket Event: `request:accepted`
+**Emitted to:** Requester user
+**Payload:**
+```json
+{
+  "roomId": "507f1f77bcf86cd799439012",
+  "roomName": "React Project",
+  "status": "fulfilled"
+}
+```
+
+### Socket Event: `request:rejected`
+**Emitted to:** Requester user
+**Payload:**
+```json
+{
+  "roomId": "507f1f77bcf86cd799439012",
+  "roomName": "React Project",
+  "status": "rejected"
+}
+```
+
+---
+
+## Error Handling
+
+All errors follow a standard format:
+
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "statusCode": 400
+}
+```
+
+### Common Request Error Codes
+
+| Status | Meaning |
+|--------|---------|
+| 400 | Bad Request - Invalid input, missing fields, or business logic violation |
+| 401 | Unauthorized - Invalid credentials or user not authenticated |
+| 403 | Forbidden - User lacks permission (not room owner) |
+| 404 | Not Found - Room or request doesn't exist |
+
+---
+
+## Security Considerations
+
+### 1. **Access Control**
+- Only authenticated users can create requests
+- Only room owners can accept/reject requests
+- Users cannot request to join their own rooms
+- Prevents unauthorized access to room member operations
+
+### 2. **Invite Code Validation**
+- Invite codes are hashed before storage
+- Prevents unauthorized room access via code exposure
+- Codes are validated before request creation
+
+### 3. **Request Deduplication**
+- Unique index on (uid, roomId) prevents duplicate requests
+- Users can only have one active request per room
+- Prevents request spam and duplicate processing
+
+### 4. **Rate Limiting**
+- All endpoints have rate limiting enabled
+- Prevents brute force attacks
+- Protects against abuse
+
+### 5. **Capacity Management**
+- Room capacity verified before adding members
+- Prevents room overflow
+- Consistent with room settings
+
+---
+
+## Request Flow Examples
+
+### Example 1: User Requests Room Access
+
+**Step 1: Get Room Invite Code**
+Room owner shares invite code: `ABC123XYZ789`
+
+**Step 2: Create Request**
+```bash
+curl -X POST http://localhost:3000/api/requests \
+  -H "Authorization: Bearer <user_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roomId": "507f1f77bcf86cd799439012",
+    "inviteCode": "ABC123XYZ789"
+  }'
+```
+
+Response:
+```json
+{
+  "success": true,
+  "requestData": {
+    "_id": "507f1f77bcf86cd799439013",
+    "status": "pending",
+    "roomName": "React Project",
+    "roomId": "507f1f77bcf86cd799439012"
+  },
+  "message": "Request created successfully."
+}
+```
+
+**Step 3: Room Owner Accepts Request**
+Owner receives socket notification and accepts:
+```bash
+curl -X PATCH http://localhost:3000/api/requests/accept \
+  -H "Authorization: Bearer <owner_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roomId": "507f1f77bcf86cd799439012",
+    "uid": "507f1f77bcf86cd799439014"
+  }'
+```
+
+Response:
+```json
+{
+  "success": true,
+  "reqsReturn": {
+    "_id": "507f1f77bcf86cd799439013",
+    "roomName": "React Project",
+    "roomId": "507f1f77bcf86cd799439012",
+    "uid": "507f1f77bcf86cd799439014",
+    "status": "fulfilled"
+  },
+  "message": "Request accepted successfully."
+}
+```
+
+**Step 4: Requester Notified via Socket**
+Requester receives real-time notification:
+```json
+{
+  "roomId": "507f1f77bcf86cd799439012",
+  "roomName": "React Project",
+  "status": "fulfilled"
+}
+```
+
+### Example 2: Room Owner Manages Multiple Requests
+
+**Step 1: Fetch All Pending Requests**
+```bash
+curl -X GET "http://localhost:3000/api/requests/all-general?page=1&limit=10" \
+  -H "Authorization: Bearer <owner_token>"
+```
+
+Response:
+```json
+{
+  "requests": [
+    {
+      "_id": "507f1f77bcf86cd799439013",
+      "roomId": "507f1f77bcf86cd799439012",
+      "requesterId": "507f1f77bcf86cd799439014",
+      "status": "pending",
+      "roomName": "React Project"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439020",
+      "roomId": "507f1f77bcf86cd799439012",
+      "requesterId": "507f1f77bcf86cd799439021",
+      "status": "pending",
+      "roomName": "React Project"
+    }
+  ],
+  "pagination": {
+    "total": 2,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1
+  },
+  "message": "Requests fetched successfully."
+}
+```
+
+**Step 2: Accept First Request**
+```bash
+curl -X PATCH http://localhost:3000/api/requests/accept \
+  -H "Authorization: Bearer <owner_token>" \
+  -d '{"roomId": "507f1f77bcf86cd799439012", "uid": "507f1f77bcf86cd799439014"}'
+```
+
+**Step 3: Reject Second Request**
+```bash
+curl -X PATCH http://localhost:3000/api/requests/reject \
+  -H "Authorization: Bearer <owner_token>" \
+  -d '{"roomId": "507f1f77bcf86cd799439012", "uid": "507f1f77bcf86cd799439021"}'
+```
+
+### Example 3: User Tracks Request History
+
+**Fetch All User Requests**
+```bash
+curl -X GET "http://localhost:3000/api/requests/all-requester?page=1&limit=5" \
+  -H "Authorization: Bearer <user_token>"
+```
+
+Response:
+```json
+{
+  "success": true,
+  "requests": [
+    {
+      "_id": "507f1f77bcf86cd799439013",
+      "roomId": "507f1f77bcf86cd799439012",
+      "uid": "507f1f77bcf86cd799439014",
+      "status": "fulfilled",
+      "roomName": "React Project"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439017",
+      "roomId": "507f1f77bcf86cd799439018",
+      "uid": "507f1f77bcf86cd799439014",
+      "status": "rejected",
+      "roomName": "Node.js Backend"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439022",
+      "roomId": "507f1f77bcf86cd799439023",
+      "uid": "507f1f77bcf86cd799439014",
+      "status": "pending",
+      "roomName": "Vue.js Frontend"
+    }
+  ],
+  "pagination": {
+    "total": 3,
+    "page": 1,
+    "limit": 5,
+    "totalPages": 1
+  },
+  "message": "Requests fetched successfully."
+}
+```
+
+---
+
+## Related Models
+
+### User Model (Reference)
+- `_id`: MongoDB ObjectId
+- `username`: Unique username
+- `email`: Unique email address
+
+### Room Model (Reference)
+- `_id`: MongoDB ObjectId
+- `owner`: Reference to User (room owner)
+- `roomName`: Name of the room
+- `maxMembers`: Maximum allowed members
+- `inviteCode`: Hashed invite code
+- `members`: Array of members with roles
+
+---
+
+## Pagination
+
+All list endpoints support pagination to manage large datasets:
+
+**Query Parameters:**
+- `page`: Current page number (default: 1, minimum: 1)
+- `limit`: Records per page (default: 10, maximum: 50)
+
+**Response Pagination Metadata:**
+```json
+{
+  "pagination": {
+    "total": 100,        // Total matching records
+    "page": 1,           // Current page
+    "limit": 10,         // Records per page
+    "totalPages": 10     // Total pages available
+  }
+}
+```
+
+**Pagination Calculation:**
+- Skip: `(page - 1) * limit`
+- Total Pages: `Math.ceil(total / limit)`
+- Has Next: `page < totalPages`
+- Has Previous: `page > 1`
+
+---
+
+## Environment Configuration
+
+Request management uses the same environment configuration as authentication and room management:
+
+```env
+PORT=3000
+NODE_ENV=development|production
+BASE_URL=http://localhost:3000
+MONGODB_URI=mongodb://...
+```
+
+---
+
+## Support & Troubleshooting
+
+### Issue: "Invalid invite code"
+- **Cause:** Invite code doesn't match room's hashed code
+- **Solution:** Verify invite code is correct and hasn't expired
+
+### Issue: "Owner can not make request to it's own room"
+- **Cause:** Trying to request access to a room you created
+- **Solution:** Only non-owners can request access
+
+### Issue: "Request already exists"
+- **Cause:** You've already made a request to this room
+- **Solution:** Wait for owner to accept/reject, or check your request status
+
+### Issue: "Room is full"
+- **Cause:** Room has reached maximum member capacity
+- **Solution:** Contact room owner to increase capacity or wait for a slot
+
+### Issue: "Only owner can accept requests"
+- **Cause:** Non-owner trying to manage requests
+- **Solution:** Only the room owner can accept/reject requests
+
+### Issue: "Request not found"
+- **Cause:** Request ID is invalid or already processed
+- **Solution:** Verify request exists and is in correct status
+
+### Issue: "Request already processed"
+- **Cause:** Trying to reject a request that's already fulfilled
+- **Solution:** Can only reject pending requests
+
+---
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2026-04-27 | Initial request management documentation |
+
+---
+
 ## Room Model
 
 ### Room Schema

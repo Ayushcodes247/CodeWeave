@@ -2,6 +2,7 @@ import { RequestModel } from "@models/request.model";
 import { Room } from "@models/room.model";
 import { Types } from "mongoose";
 import { AppError } from "@utils/essential.util";
+import { getIO } from "@/socket";
 
 interface DataType {
   roomId: Types.ObjectId;
@@ -62,6 +63,13 @@ const acceptService = async (data: DataType): Promise<ReturnDataType> => {
   });
 
   await room.save();
+  const io = getIO();
+
+  io.to(`user:${request.uid}`).emit("request:accepted", {
+    roomId: room._id,
+    roomName: room.roomName,
+    status: request.status,
+  });
 
   return {
     reqsReturn: {
