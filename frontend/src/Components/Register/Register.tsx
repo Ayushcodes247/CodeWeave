@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { useAppDispatch, useAppSelector } from "../../services/hook";
+import { useAppDispatch } from "../../services/hook";
 import { registerUser } from "../../features/authentication/authThunk";
 import GitLogin from "../GithubButton/GitLogin";
+import { ShowAuthToaster } from "../Toasters/AuthToaster";
+import { errorToast } from "../Toasters/ErroToaster";
 
 const Register = () => {
   document.title = "Code  weave | Register";
@@ -29,7 +31,6 @@ const Register = () => {
 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { authChecked } = useAppSelector((state: any) => state.authentication);
 
   return (
     <div className="min-h-screen w-full bg-[#0E100F] flex flex-col items-center px-4">
@@ -50,10 +51,19 @@ const Register = () => {
               reset();
               try {
                 const response = await dispatch(registerUser(data)).unwrap();
+                ShowAuthToaster(
+                  {
+                    _id: response.user._id,
+                    username: response.user.username,
+                    profilePic: response.user.profilePic,
+                  },
+                  response.message,
+                );
                 if (response) {
                   navigate("/main");
                 }
-              } catch (err) {
+              } catch (err: any) {
+                errorToast(err.message);
                 console.error(err);
               }
             })}

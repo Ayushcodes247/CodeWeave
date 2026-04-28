@@ -16,7 +16,6 @@ const RequestJoin = () => {
   } = useForm({
     mode: "onBlur",
     defaultValues: {
-      uid: "",
       roomId : "",
       inviteCode: "",
     },
@@ -72,29 +71,6 @@ const RequestJoin = () => {
                     reset();
                   })}
                 >
-                  {/* UID */}
-                  <div className="flex flex-col gap-1">
-                    <input
-                      type="text"
-                      placeholder="Enter Account ID"
-                      className={`bg-[#272727] px-4 py-3 rounded-md text-white outline-none ${
-                        errors.uid ? "border border-red-500" : ""
-                      }`}
-                      {...register("uid", {
-                        required: "Account ID is required.",
-                        minLength: {
-                          value: 24,
-                          message: "Account ID must be at least 24 characters",
-                        },
-                      })}
-                    />
-                    {errors.uid && (
-                      <p className="text-red-400 text-xs">
-                        {errors.uid.message}
-                      </p>
-                    )}
-                  </div>
-
                   <div className="flex flex-col gap-1">
                    <input
                       type="text"
@@ -128,11 +104,11 @@ const RequestJoin = () => {
                       {...register("inviteCode", {
                         required: "Invite Code is required.",
                         maxLength: {
-                          value: 6,
+                          value: 12,
                           message: "Invite code must be max 6 characters",
                         },
                         minLength: {
-                          value: 6,
+                          value: 12,
                           message: "Invite code must be 6 characters",
                         },
                       })}

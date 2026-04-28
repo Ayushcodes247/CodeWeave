@@ -24,6 +24,10 @@ export const InitializeSocketServer = (server: any) => {
       socket.join(`room:${roomId}`);
     });
 
+    socket.on("leaveRoom", (roomId: string) => {
+      socket.leave(`room:${roomId}`);
+    });
+
     socket.on("disconnect", () => {
       console.info(`[${time()}] User disconnected: ${socket.id}`);
     });

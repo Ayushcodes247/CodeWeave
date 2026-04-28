@@ -5,6 +5,8 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { loginUser } from "../../features/authentication/authThunk";
 import { useAppDispatch, useAppSelector } from "../../services/hook";
 import GitLogin from "../GithubButton/GitLogin";
+import { ShowAuthToaster } from "../Toasters/AuthToaster";
+import { errorToast } from "../Toasters/ErroToaster";
 
 const Login = () => {
   document.title = "Code weave | Login";
@@ -26,7 +28,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useAppDispatch();
-  const { authChecked } = useAppSelector((state: any) => state.authentication);
   const navigate = useNavigate();
 
   return (
@@ -48,10 +49,19 @@ const Login = () => {
               reset();
               try {
                 const response = await dispatch(loginUser(data)).unwrap();
+                ShowAuthToaster(
+                  {
+                    _id: response.user._id,
+                    username: response.user.username,
+                    profilePic: response.user.profilePic,
+                  },
+                  response.message,
+                );
                 if (response) {
                   navigate("/main");
                 }
-              } catch (err) {
+              } catch (err : any) {
+                errorToast(err.message);
                 console.error(err);
               }
             })}

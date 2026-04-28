@@ -5,6 +5,7 @@ import { IoMdCloseCircle } from "react-icons/io";
 import { useForm } from "react-hook-form";
 import { useAppDispatch, useAppSelector } from "../../../services/hook";
 import { create } from "../../../features/rooms/roomThunk";
+import { errorToast } from "../../Toasters/ErroToaster";
 
 type FormValues = {
   roomName: string;
@@ -39,7 +40,6 @@ const FormCard = () => {
     }
   }, [selectedMode, setValue]);
   const dispatch = useAppDispatch();
-  const { loading } = useAppSelector((state : any) => state.room);
 
   return (
     <div className="flex-none">
@@ -89,7 +89,9 @@ const FormCard = () => {
                     const senitizedData = { ...data , maxMembers : Number(data.maxMembers) };
                     const response = await dispatch(create(senitizedData)).unwrap();
                     console.log("room creation form response:", response);
-                  } catch (error) {
+                  } catch (error : any) {
+                    const message = error.message;
+                    errorToast(message);
                     console.error(error);
                   }
                 })}
