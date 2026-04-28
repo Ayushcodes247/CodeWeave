@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { FaPlusCircle } from "react-icons/fa";
+import { FaPlusCircle, FaCopy } from "react-icons/fa";
 import { IoMdCloseCircle } from "react-icons/io";
 import { useForm } from "react-hook-form";
-import { useAppDispatch, useAppSelector } from "../../../services/hook";
+import { useAppDispatch } from "../../../services/hook";
 import { create } from "../../../features/rooms/roomThunk";
 import { errorToast } from "../../Toasters/ErroToaster";
+import { successToast } from "../../Toasters/successToaster";
 
 type FormValues = {
   roomName: string;
@@ -15,6 +16,7 @@ type FormValues = {
 
 const FormCard = () => {
   const [clicked, setClicked] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const {
     register,
@@ -33,16 +35,28 @@ const FormCard = () => {
   });
 
   const selectedMode = watch("mode");
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (selectedMode === "solo") {
       setValue("maxMembers", 1);
     }
   }, [selectedMode, setValue]);
-  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    if (!inviteCode) return;
+
+    const timer = setTimeout(() => {
+      setInviteCode(null);
+      setTimeout(() => setClicked(false), 300);
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [inviteCode]);
 
   return (
     <div className="flex-none">
+      {/* CARD */}
       <motion.div
         onClick={() => setClicked(true)}
         layout
@@ -66,9 +80,10 @@ const FormCard = () => {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="w-[92%] max-w-lg min-h-80 bg-[#1b1b1b] rounded-xl p-6 shadow-xl flex flex-col"
+              className="w-[92%] max-w-lg min-h-80 bg-[#1b1b1b] rounded-xl p-6 shadow-xl flex flex-col gap-4"
             >
-              <h2 className="text-xl text-white mb-4 flex justify-between items-center">
+              {/* HEADER */}
+              <h2 className="text-xl text-white flex justify-between items-center">
                 Create Room
                 <IoMdCloseCircle
                   className="size-9 text-red-500 cursor-pointer"
@@ -76,23 +91,26 @@ const FormCard = () => {
                 />
               </h2>
 
+              {/* FORM */}
               <form
                 className="flex flex-col gap-4"
                 onSubmit={handleSubmit(async (data) => {
-                  reset();
-
-                  console.log("Room creation data from form:", {
-                    ...data,
-                    maxMembers: Number(data.maxMembers),
-                  });
                   try {
-                    const senitizedData = { ...data , maxMembers : Number(data.maxMembers) };
-                    const response = await dispatch(create(senitizedData)).unwrap();
-                    console.log("room creation form response:", response);
-                  } catch (error : any) {
-                    const message = error.message;
-                    errorToast(message);
-                    console.error(error);
+                    const sanitized = {
+                      ...data,
+                      maxMembers: Number(data.maxMembers),
+                    };
+
+                    const res = await dispatch(create(sanitized)).unwrap();
+
+                    successToast(res.message);
+
+                    // ✅ store invite code
+                    setInviteCode(res.inviteCode);
+
+                    reset();
+                  } catch (error: any) {
+                    errorToast(error.message);
                   }
                 })}
               >
@@ -101,11 +119,10 @@ const FormCard = () => {
                   placeholder="Enter room name."
                   className="bg-[#272727] px-4 py-3 rounded-md text-white outline-none"
                   {...register("roomName", {
-                    required: "room name is required.",
+                    required: "Room name is required.",
                     maxLength: 50,
                     minLength: 2,
                   })}
-                  onChange={(e) => setValue("roomName", e.target.value)}
                 />
 
                 {errors.roomName && (
@@ -114,6 +131,7 @@ const FormCard = () => {
                   </p>
                 )}
 
+                {/* MODE */}
                 <div className="flex flex-col gap-2">
                   <p className="text-sm text-[#c4c4c4]">Select Mode</p>
 
@@ -124,17 +142,12 @@ const FormCard = () => {
                       animate={{
                         x: selectedMode === "team" ? "100%" : "0%",
                       }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 25,
-                      }}
                     />
 
                     <button
                       type="button"
                       onClick={() => setValue("mode", "solo")}
-                      className={`w-1/2 z-10 py-2 text-sm font-medium ${
+                      className={`w-1/2 z-10 py-2 ${
                         selectedMode === "solo" ? "text-black" : "text-white"
                       }`}
                     >
@@ -144,7 +157,7 @@ const FormCard = () => {
                     <button
                       type="button"
                       onClick={() => setValue("mode", "team")}
-                      className={`w-1/2 z-10 py-2 text-sm font-medium ${
+                      className={`w-1/2 z-10 py-2 ${
                         selectedMode === "team" ? "text-black" : "text-white"
                       }`}
                     >
@@ -153,49 +166,71 @@ const FormCard = () => {
                   </div>
                 </div>
 
+                {/* TEAM INPUT */}
                 <AnimatePresence>
                   {selectedMode === "team" && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="overflow-hidden"
                     >
                       <input
                         type="number"
                         placeholder="Enter number of members"
-                        className="bg-[#272727] px-4 py-3 rounded-md text-white outline-none w-full"
+                        className="bg-[#272727] px-4 py-3 rounded-md text-white w-full"
                         {...register("maxMembers", {
-                          valueAsNumber: true,
                           required: "Max members required",
-                          min: {
-                            value: 2,
-                            message: "Minimum 2 members",
-                          },
-                          max: {
-                            value: 10,
-                            message: "Max 10 members allowed",
-                          },
+                          min: 2,
+                          max: 10,
                         })}
                       />
-
-                      {errors.maxMembers && (
-                        <p className="text-red-400 text-sm mt-1">
-                          {errors.maxMembers.message}
-                        </p>
-                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
 
                 <button
                   type="submit"
-                  className="bg-[#D6FE50] cursor-pointer shadow-xl px-4 py-3 rounded-md font-semibold text-lg sm:text-base"
+                  className="bg-[#D6FE50] py-3 rounded-md font-semibold"
                 >
                   Create Room
                 </button>
               </form>
+
+              {/* 🔥 INVITE CODE DISPLAY */}
+              <AnimatePresence>
+                {inviteCode && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                    className="bg-[#222] border border-[#D6FE50] rounded-lg p-4 flex flex-col gap-3"
+                  >
+                    <p className="text-sm text-[#D6FE50] font-medium">
+                      Invite Code (copy now)
+                    </p>
+
+                    <div className="flex items-center justify-between bg-[#111] px-3 py-2 rounded-md">
+                      <span className="text-white tracking-wider">
+                        {inviteCode}
+                      </span>
+
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(inviteCode)
+                        }
+                        className="text-[#D6FE50] hover:scale-110 transition"
+                      >
+                        <FaCopy />
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-red-400">
+                      ⚠ This code is shown only once and will disappear in 10
+                      seconds.
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </motion.div>
         )}

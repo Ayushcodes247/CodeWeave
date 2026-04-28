@@ -4,9 +4,14 @@ import { FaUserPlus } from "react-icons/fa";
 import { IoMdCloseCircle } from "react-icons/io";
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
+import { useAppDispatch } from "../../../services/hook";
+import { request } from "../../../features/request/requestThunk";
+import { errorToast } from "../../Toasters/ErroToaster";
+import { successToast } from "../../Toasters/successToaster";
 
 const RequestJoin = () => {
   const [isClicked, setIsClicked] = useState(false);
+  const dispatch = useAppDispatch();
 
   const {
     handleSubmit,
@@ -16,7 +21,7 @@ const RequestJoin = () => {
   } = useForm({
     mode: "onBlur",
     defaultValues: {
-      roomId : "",
+      roomId: "",
       inviteCode: "",
     },
   });
@@ -66,13 +71,19 @@ const RequestJoin = () => {
 
                 <form
                   className="flex flex-col gap-3"
-                  onSubmit={handleSubmit((data) => {
-                    console.log("Form Data:", data);
+                  onSubmit={handleSubmit(async (data) => {
                     reset();
+                    try {
+                      const response = await dispatch(request(data)).unwrap();
+                      successToast(response.message);
+                    } catch (error: any) {
+                      errorToast(error.message);
+                      console.error(error);
+                    }
                   })}
                 >
                   <div className="flex flex-col gap-1">
-                   <input
+                    <input
                       type="text"
                       placeholder="Enter Room ID"
                       className={`bg-[#272727] px-4 py-3 rounded-md text-white outline-none ${
@@ -103,14 +114,6 @@ const RequestJoin = () => {
                       }`}
                       {...register("inviteCode", {
                         required: "Invite Code is required.",
-                        maxLength: {
-                          value: 12,
-                          message: "Invite code must be max 6 characters",
-                        },
-                        minLength: {
-                          value: 12,
-                          message: "Invite code must be 6 characters",
-                        },
                       })}
                     />
                     {errors.inviteCode && (

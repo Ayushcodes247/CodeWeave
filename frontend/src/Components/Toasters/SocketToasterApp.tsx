@@ -29,7 +29,7 @@ export const socketToastApp = (message: string) => {
     ),
     {
       position: "top-right",
-      duration: 8000,
+      duration: 7500,
     },
   );
 };

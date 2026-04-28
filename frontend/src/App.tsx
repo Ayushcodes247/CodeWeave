@@ -27,11 +27,16 @@ const App = () => {
 
     socketManager.connect(user._id);
 
-    socketManager.on("request:new", (data) => {
-      console.log("socket data",data);
-      socketToastApp(``);
-    })
-  }, [user]);
+    const handler = (data: any) => {
+      socketToastApp(`Room joining request from ${data.requesterId}`);
+    };
+
+    socketManager.on("request:new", handler);
+
+    return () => {
+      socketManager.off("request:new", handler);
+    };
+  }, [user?._id]);
 
   return (
     <>

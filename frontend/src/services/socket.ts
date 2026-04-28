@@ -1,58 +1,76 @@
-import { io , Socket } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import { Store } from "../store/store";
 
-const URI = import.meta.env.VITE_NODE_ENV === "production" ? import.meta.env.VITE_SOCKET_URL : "http://localhost:3000";
+const URI =
+  import.meta.env.VITE_NODE_ENV === "production"
+    ? import.meta.env.VITE_SOCKET_URL
+    : "http://localhost:3000";
 
-class SocketManager{
-    private socket : Socket | null = null;
-    private uid : string | null = null;
+class SocketManager {
+  private socket: Socket | null = null;
+  private uid: string | null = null;
 
-    connect(uid : string){
-        if(this.socket?.connect) return;
+  connect(uid: string) {
+    if (this.socket?.connected) return;
 
-        this.uid = uid;
-        this.socket = io(URI,{
-            autoConnect : false,
-            withCredentials : true,
-            auth : { token : Store.getState().authentication.accessToken }
-        });
+    this.uid = uid;
 
-        this.socket.connect();
+    this.socket = io(URI, {
+      autoConnect: false,
+      withCredentials: true,
+      auth: {
+        token: Store.getState().authentication.accessToken,
+      },
+    });
 
-        this.socket.on("connect", () => {
-            this.socket?.emit("joinUser", uid);
-        });
+    this.socket.connect();
 
-        this.socket.on("disconnect", () => {
-            console.info("Socket disconnected.");
-        });
-    };
+    this.socket.on("connect", () => {
+      console.info("Socket connected:", this.socket?.id);
 
-    joinRoom(roomId : string){
-        this.socket?.emit("joinRoom",roomId);
-    };
+      this.socket?.emit("joinUser", uid);
+    });
 
-    leaveRoom(roomId : string){
-        this.socket?.emit("leaveRoom",roomId);
-    };
+    this.socket.on("disconnect", () => {
+      console.info("Socket disconnected");
+    });
 
-    on(event : string, cb : (...args: any[]) => void){
-        this.socket?.off();
-        this.socket?.on(event,cb);
-    };
+    this.socket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message);
+    });
+  }
 
-    emit(event : string, data : any){
-        this.socket?.emit(event,data);
-    };
+  on(event: string, cb: (...args: any[]) => void) {
+    this.socket?.on(event, cb);
+  }
 
-    disconnect(){
-        this.socket?.disconnect();
-        this.socket = null;
-    };
+  off(event: string, cb?: (...args: any[]) => void) {
+    this.socket?.off(event, cb);
+  }
 
-    getSocket(){
-        return this.socket;
-    }
+  emit(event: string, data: any) {
+    this.socket?.emit(event, data);
+  }
+
+  joinRoom(roomId: string) {
+    this.socket?.emit("joinRoom", roomId);
+  }
+
+  leaveRoom(roomId: string) {
+    this.socket?.emit("leaveRoom", roomId);
+  }
+
+  disconnect() {
+    if (!this.socket) return;
+
+    this.socket.disconnect();
+    this.socket = null;
+    this.uid = null;
+  }
+
+  getSocket() {
+    return this.socket;
+  }
 }
 
 export const socketManager = new SocketManager();
