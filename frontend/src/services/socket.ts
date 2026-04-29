@@ -45,7 +45,11 @@ class SocketManager {
   }
 
   off(event: string, cb?: (...args: any[]) => void) {
-    this.socket?.off(event, cb);
+    if (cb) {
+      this.socket?.off(event, cb);
+    } else {
+      this.socket?.off(event);
+    }
   }
 
   emit(event: string, data: any) {

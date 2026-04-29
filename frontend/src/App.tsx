@@ -27,14 +27,25 @@ const App = () => {
 
     socketManager.connect(user._id);
 
-    const handler = (data: any) => {
-      socketToastApp(`Room joining request from ${data.requesterId}`);
+    const newRequestHandler = (data: any) => {
+      socketToastApp(`Room joining request from ${data.requesterId}.`);
     };
 
-    socketManager.on("request:new", handler);
+    const acceptHandler = (data: any) => {
+      socketToastApp(`Your request to join ${data.roomName} was accepted.`);
+    };
+
+    const rejectHandler = (data: any) => {
+      socketToastApp(`Your request to join ${data.roomName} was rejected.`);
+    };
+
+    socketManager.on("request:new", newRequestHandler);
+    socketManager.on("request:accepted", acceptHandler);
+    socketManager.on("request:rejected", rejectHandler);
 
     return () => {
-      socketManager.off("request:new", handler);
+      socketManager.off("request:new", newRequestHandler);
+      socketManager.off("request:accept", acceptHandler);
     };
   }, [user?._id]);
 

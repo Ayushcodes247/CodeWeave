@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 interface RequestState {
-  requestData: object | null;
+  requestData: object | null | Array<object>;
   loading: boolean;
 }
 

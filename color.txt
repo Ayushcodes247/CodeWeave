@@ -3,7 +3,7 @@ button color = tea green = #D4FB54
 text color = white smoke = #F5F5F5
 background color = night = #0E100F
 container color = midnight = #171918,#1E1E1E
-complimantery color = ash gray = #656964, #202221, #FF1C64
+complimantery color = ash gray = #656964, #202221, #ff1c1c
 eye = #6F7170
 
 DARK THEME COLOR - 2:-
