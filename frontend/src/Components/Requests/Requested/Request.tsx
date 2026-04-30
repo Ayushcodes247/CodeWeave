@@ -3,7 +3,6 @@ import { errorToast } from "../../Toasters/ErroToaster";
 import { motion, AnimatePresence } from "motion/react";
 import { useAppDispatch } from "../../../services/hook";
 import { requesterRequest } from "../../../features/request/requestThunk";
-import { socketManager } from "../../../services/socket";
 
 type RequestType = {
   _id: string;

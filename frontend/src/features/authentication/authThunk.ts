@@ -134,3 +134,17 @@ export const logoutUserAll = createAsyncThunk(
     return data;
   },
 );
+
+export const profileHandler = createAsyncThunk(
+  "authorization/me",
+  async (_) => {
+    const token = Store.getState().authentication.accessToken;
+    const response = await api.get(`${import.meta.env.VITE_BASE_URL}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  },
+);
