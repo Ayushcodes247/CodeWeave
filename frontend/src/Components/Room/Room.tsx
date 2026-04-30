@@ -12,16 +12,16 @@ const Room = () => {
       <div className="pt-5 shrink-0">
         <NavBar />
       </div>
-      <div className="pt-5 shrink-0">
-        <SearchBar/>
+
+      <div className="pt-5 px-6 lg:px-12 shrink-0">
+        <SearchBar />
       </div>
 
-      <div className="flex-1 w-full flex">
-        <div className="w-full max-w-440 mx-auto px-6 lg:px-12 py-8">
-          <div className="flex flex-wrap justify-center gap-8">
-            <FormCard/>
-            <ContentCard/>
-          </div>
+      <div className="flex-1 w-full px-6 lg:px-12 py-8">
+        <div className="max-w-[1200px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <ContentCard />
+
+          <FormCard />
         </div>
       </div>
     </main>

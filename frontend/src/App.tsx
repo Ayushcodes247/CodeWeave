@@ -13,6 +13,7 @@ import Request from "./Components/Requests/Request";
 import { socketManager } from "./services/socket";
 import { Toaster } from "react-hot-toast";
 import { socketToastApp } from "./Components/Toasters/SocketToasterApp";
+import Arena from "./Components/Arean/Arena";
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -63,6 +64,7 @@ const App = () => {
           <Route path="/room" element={<Room />} />
           <Route path="/request" element={<Request />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/room/:name/:id" element={<Arena/>}/>
         </Route>
       </Routes>
     </>
