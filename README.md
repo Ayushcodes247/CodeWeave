@@ -756,6 +756,126 @@ Authorization: Bearer <access_token>
 
 ---
 
+### 3. **Get User's Rooms**
+
+Retrieves all rooms where the authenticated user is a member. This endpoint returns a paginated list of rooms with member details and the user's role in each room.
+
+**Endpoint:**
+```
+GET /rooms/get-room
+```
+
+**Rate Limiting:** Yes (routeLimiter applied)
+
+**Authentication:** Required (Bearer token)
+
+**Request Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:** (Optional)
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | number | 1 | Page number for pagination (minimum: 1) |
+| `limit` | number | 10 | Number of records per page (default: 10, maximum: 50) |
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "room": [
+    {
+      "_id": "507f1f77bcf86cd799439012",
+      "roomName": "React Project",
+      "ownerName": "john_doe",
+      "membersCount": 3,
+      "maxMembers": 5,
+      "role": "owner"
+    },
+    {
+      "_id": "507f1f77bcf86cd799439013",
+      "roomName": "Node.js Backend",
+      "ownerName": "jane_smith",
+      "membersCount": 4,
+      "maxMembers": 8,
+      "role": "viewer"
+    }
+  ],
+  "pagination": {
+    "total": 12,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 2
+  },
+  "message": "Rooms fetched successfully."
+}
+```
+
+**Error Responses:**
+
+| Status | Code | Message |
+|--------|------|---------|
+| 400 | BAD_REQUEST | Please provide valid user data |
+| 401 | UNAUTHORIZED | Unauthorized |
+
+**Logic:**
+- Validates that the authenticated user exists
+- Retrieves all rooms where the user is a member (matches "members.user" field)
+- Applies pagination with default page=1, limit=10
+- Caps maximum limit at 50 records per page to prevent excessive data transfer
+- Performs aggregation to lookup owner details (username)
+- Calculates members count dynamically from the members array
+- Determines the authenticated user's role in each room
+- Returns rooms sorted by last update time (newest first)
+- Includes total count and pagination metadata
+
+**Response Field Details:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `_id` | string | MongoDB ObjectId of the room |
+| `roomName` | string | Name of the room |
+| `ownerName` | string | Username of the room owner |
+| `membersCount` | number | Current number of members in the room |
+| `maxMembers` | number | Maximum allowed members in the room |
+| `role` | string | Authenticated user's role in the room ("owner", "editor", "viewer") |
+
+**Pagination Details:**
+
+The response includes pagination metadata for managing large datasets:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total` | number | Total count of rooms where user is a member |
+| `page` | number | Current page number |
+| `limit` | number | Records per page |
+| `totalPages` | number | Total number of pages available |
+
+**Example Requests:**
+
+Get first page with default limit:
+```bash
+curl -X GET http://localhost:3000/api/rooms/get-room \
+  -H "Authorization: Bearer <access_token>"
+```
+
+Get second page with custom limit:
+```bash
+curl -X GET "http://localhost:3000/api/rooms/get-room?page=2&limit=5" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+**Security Considerations:**
+
+- Only returns rooms where the authenticated user is a member
+- User's role in each room is included for permission management
+- No exposure of sensitive room data outside member scope
+- Rate limiting prevents abuse and excessive data retrieval
+- Maximum limit of 50 records per page prevents performance issues
+
+---
+
 # Request Management API Documentation
 
 ## Overview

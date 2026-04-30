@@ -94,6 +94,7 @@ const roomSchema: Schema<IRoom> = new Schema(
 
 roomSchema.index({ roomName: 1, owner: 1 }, { unique: true });
 roomSchema.index({ inviteCode: 1 });
+roomSchema.index({ "members.user": 1 });
 
 roomSchema.methods.generateInviteCode = function (): string {
   return crypto.randomBytes(6).toString("hex");
@@ -150,4 +151,4 @@ export const validateRoom = (room: object): ValidationResult => {
   });
 };
 
-export const Room = model<IRoom,IRoomModel>("Room", roomSchema);
+export const Room = model<IRoom, IRoomModel>("Room", roomSchema);
